@@ -89,7 +89,6 @@ namespace ECommerceAPI.API.Controllers
                     Path = x.filePath
                 }).ToList());
             await _productImageFileWriteRepository.SaveAsync();
-
             return Ok();
         }
 
