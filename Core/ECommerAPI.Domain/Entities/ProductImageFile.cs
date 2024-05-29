@@ -8,5 +8,6 @@ namespace ECommerAPI.Domain.Entities
 {
     public class ProductImageFile : SiteFile
     {
+        public ICollection<Product> Products { get; set; }
     }
 }

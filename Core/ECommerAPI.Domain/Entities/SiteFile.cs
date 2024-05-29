@@ -12,6 +12,7 @@ namespace ECommerAPI.Domain.Entities
     {
         public string Name {  get; set; }
         public string Path { get; set; }
+        public string Storage {  get; set; }
         [NotMapped]
         public override DateTime LastModifiedDate { get => base.LastModifiedDate; set => base.LastModifiedDate = value; }
     }
