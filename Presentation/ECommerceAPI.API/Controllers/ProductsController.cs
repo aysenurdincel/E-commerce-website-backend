@@ -7,11 +7,14 @@ using ECommerceAPI.Application.RequestParameters;
 using ECommerceAPI.Application.Storages;
 using ECommerceAPI.Application.ViewModels.Products;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 
 namespace ECommerceAPI.API.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
+
+    //TEST CONTROLLER
     public class ProductsController : ControllerBase
     {
         private readonly IProductReadRepository _productReadRepository;
@@ -24,8 +27,9 @@ namespace ECommerceAPI.API.Controllers
         private readonly IProductImageFileWriteRepository _productImageFileWriteRepository;
         private readonly IInvoiceFileReadRepository _invoiceFileReadRepository;
         private readonly IInvoiceFileWriteRepository _invoiceFileWriteRepository;
+        private readonly IConfiguration _configuration;
 
-        public ProductsController(IProductWriteRepository productWriteRepository, IProductReadRepository productReadRepository, IWebHostEnvironment webHostEnvironment, IStorageService storageService, ISiteFileWriteRepository siteFileWriteRepository, ISiteFileReadRepository siteFileReadRepository, IProductImageFileReadRepository productImageFileReadRepository, IProductImageFileWriteRepository productImageFileWriteRepository, IInvoiceFileReadRepository invoiceFileReadRepository, IInvoiceFileWriteRepository invoiceFileWriteRepository)
+        public ProductsController(IProductWriteRepository productWriteRepository, IProductReadRepository productReadRepository, IWebHostEnvironment webHostEnvironment, IStorageService storageService, ISiteFileWriteRepository siteFileWriteRepository, ISiteFileReadRepository siteFileReadRepository, IProductImageFileReadRepository productImageFileReadRepository, IProductImageFileWriteRepository productImageFileWriteRepository, IInvoiceFileReadRepository invoiceFileReadRepository, IInvoiceFileWriteRepository invoiceFileWriteRepository, IConfiguration configuration)
         {
             _productWriteRepository = productWriteRepository;
             _productReadRepository = productReadRepository;
@@ -37,6 +41,7 @@ namespace ECommerceAPI.API.Controllers
             _productImageFileWriteRepository = productImageFileWriteRepository;
             _invoiceFileReadRepository = invoiceFileReadRepository;
             _invoiceFileWriteRepository = invoiceFileWriteRepository;
+            _configuration = configuration;
         }
 
         [HttpGet]
@@ -58,10 +63,24 @@ namespace ECommerceAPI.API.Controllers
             return Ok(new { total, products });
         }
 
+        //farklı türde dosylar gelirse video vb. yönetilebilir olması için querystring
         [HttpGet("{id}")]
         public async Task<IActionResult> Get(string id)
         {
             return Ok( _productReadRepository.GetByIdAsync(id, false));
+        }
+
+        //kesin image olduğu için route da tanımlı
+        [HttpGet("[action]/{id}")]
+        public async Task<IActionResult> GetImages(string id)
+        {
+            Product? product = await _productReadRepository.Table.Include(x => x.ProductImages).FirstOrDefaultAsync(x => x.Id == Guid.Parse(id));
+            return Ok(product.ProductImages.Select(x => new
+            {
+                Path = $"{_configuration["BaseLocalStorageUrl"]}\\{x.Path}",
+                x.Name,
+                x.Id
+            }));
         }
 
         [HttpPost]
@@ -114,6 +133,16 @@ namespace ECommerceAPI.API.Controllers
             return Ok();
         }
 
-        
+        [HttpDelete("[action]/{id}")]
+        public async Task<IActionResult> DeleteImage(string id, string imageId)
+        {
+            Product? product = await _productReadRepository.Table.Include(x => x.ProductImages).FirstOrDefaultAsync(x => x.Id == Guid.Parse(id));
+            ProductImageFile productImageFile = product.ProductImages.FirstOrDefault(x => x.Id == Guid.Parse(imageId));
+            product.ProductImages.Remove(productImageFile);
+            await _productImageFileWriteRepository.SaveAsync();
+            return Ok();
+        }
+
+
     }
 }
