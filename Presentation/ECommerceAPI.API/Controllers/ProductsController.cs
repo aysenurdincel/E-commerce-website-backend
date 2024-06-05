@@ -1,11 +1,18 @@
 ﻿
 using ECommerAPI.Domain.Entities;
+using ECommerceAPI.Application.Cqrs.Commands.Product.CreateProduct;
+using ECommerceAPI.Application.Cqrs.Commands.Product.DeleteProduct;
+using ECommerceAPI.Application.Cqrs.Commands.Product.UpdateProduct;
+using ECommerceAPI.Application.Cqrs.Commands.ProductImage;
+using ECommerceAPI.Application.Cqrs.Commands.ProductImage.DeleteImages;
+using ECommerceAPI.Application.Cqrs.Queries.GetProducts;
+using ECommerceAPI.Application.Cqrs.Queries.Product.GetProducts;
+using ECommerceAPI.Application.Cqrs.Queries.ProductImage;
 using ECommerceAPI.Application.Repositories;
-using ECommerceAPI.Application.Repositories.Invoice;
 using ECommerceAPI.Application.Repositories.ProductImage;
-using ECommerceAPI.Application.RequestParameters;
 using ECommerceAPI.Application.Storages;
 using ECommerceAPI.Application.ViewModels.Products;
+using MediatR;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -25,11 +32,10 @@ namespace ECommerceAPI.API.Controllers
         private readonly ISiteFileReadRepository _siteFileReadRepository;
         private readonly IProductImageFileReadRepository _productImageFileReadRepository;
         private readonly IProductImageFileWriteRepository _productImageFileWriteRepository;
-        private readonly IInvoiceFileReadRepository _invoiceFileReadRepository;
-        private readonly IInvoiceFileWriteRepository _invoiceFileWriteRepository;
         private readonly IConfiguration _configuration;
+        private readonly IMediator _mediator;
 
-        public ProductsController(IProductWriteRepository productWriteRepository, IProductReadRepository productReadRepository, IWebHostEnvironment webHostEnvironment, IStorageService storageService, ISiteFileWriteRepository siteFileWriteRepository, ISiteFileReadRepository siteFileReadRepository, IProductImageFileReadRepository productImageFileReadRepository, IProductImageFileWriteRepository productImageFileWriteRepository, IInvoiceFileReadRepository invoiceFileReadRepository, IInvoiceFileWriteRepository invoiceFileWriteRepository, IConfiguration configuration)
+        public ProductsController(IProductWriteRepository productWriteRepository, IProductReadRepository productReadRepository, IWebHostEnvironment webHostEnvironment, IStorageService storageService, ISiteFileWriteRepository siteFileWriteRepository, ISiteFileReadRepository siteFileReadRepository, IProductImageFileReadRepository productImageFileReadRepository, IProductImageFileWriteRepository productImageFileWriteRepository, IConfiguration configuration, IMediator mediator)
         {
             _productWriteRepository = productWriteRepository;
             _productReadRepository = productReadRepository;
@@ -39,107 +45,67 @@ namespace ECommerceAPI.API.Controllers
             _siteFileReadRepository = siteFileReadRepository;
             _productImageFileReadRepository = productImageFileReadRepository;
             _productImageFileWriteRepository = productImageFileWriteRepository;
-            _invoiceFileReadRepository = invoiceFileReadRepository;
-            _invoiceFileWriteRepository = invoiceFileWriteRepository;
             _configuration = configuration;
+            _mediator = mediator;
         }
 
         [HttpGet]
-        public async Task<IActionResult> Get([FromQuery]Pagination pagination)
+        public async Task<IActionResult> Get([FromQuery]GetAllProductsQueryRequest request)
         {
-            //pagination için total data sayısını bildir
-            var total = _productReadRepository.GetAll(false).Count();
-
-            var products = _productReadRepository.GetAll(false).Skip(pagination.Page * pagination.Size).Take(pagination.Size).Select(p => new
-            {
-                p.Name,
-                p.Stock,
-                p.Price,
-                p.Id,
-                p.CreationDate,
-                p.LastModifiedDate
-            }).ToList();
-
-            return Ok(new { total, products });
+            GetAllProductsQueryResponse response =  await _mediator.Send(request);
+            return Ok(response);
         }
 
         //farklı türde dosylar gelirse video vb. yönetilebilir olması için querystring
-        [HttpGet("{id}")]
-        public async Task<IActionResult> Get(string id)
+        [HttpGet("{Id}")]
+        public async Task<IActionResult> Get([FromRoute]GetByIdProductsQueryRequest request)
         {
-            return Ok( _productReadRepository.GetByIdAsync(id, false));
+            GetByIdProductsQueryResponse response = await _mediator.Send(request);
+            return Ok(response);
         }
 
         //kesin image olduğu için route da tanımlı
-        [HttpGet("[action]/{id}")]
-        public async Task<IActionResult> GetImages(string id)
+        [HttpGet("[action]/{Id}")]
+        public async Task<IActionResult> GetImages([FromRoute]GetProductImagesQueryRequest request)
         {
-            Product? product = await _productReadRepository.Table.Include(x => x.ProductImages).FirstOrDefaultAsync(x => x.Id == Guid.Parse(id));
-            return Ok(product.ProductImages.Select(x => new
-            {
-                Path = $"{_configuration["BaseLocalStorageUrl"]}\\{x.Path}",
-                x.Name,
-                x.Id
-            }));
+            List<GetProductImagesQueryResponse> response = await _mediator.Send(request);
+            return Ok(response);
         }
 
         [HttpPost]
-        public async Task<IActionResult> Post(VM_ProductCreate product)
+        public async Task<IActionResult> Post(CreateProductCommandRequest request)
         {
-            await _productWriteRepository.AddAsync(new()
-            {
-                Name = product.Name,
-                Stock = product.Stock,
-                Price = product.Price
-            });
-            await _productWriteRepository.SaveAsync();
+            CreateProductCommandResponse reponse = await _mediator.Send(request);
             return Ok();
         }
 
         [HttpPost("[action]")]
-        public async Task<IActionResult> Upload(string id)
+        public async Task<IActionResult> Upload([FromQuery] UploadProductImageCommandRequest request)
         {
-            List<(string fileName,string filePath)> data = await _storageService.UploadAsync("product-images", Request.Form.Files);
-
-            Product product = await _productReadRepository.GetByIdAsync(id);
-
-            await _productImageFileWriteRepository.AddRangeAsync(data.Select(
-                x=> new ProductImageFile { 
-                    Name = x.fileName,
-                    Path = x.filePath,
-                    Storage = _storageService.StorageName,
-                    Products = new List<Product> { product }
-                }).ToList());
-            await _productImageFileWriteRepository.SaveAsync();
+            request.FormFileCollection = Request.Form.Files;
+            UploadProductImageCommandResponse response = await _mediator.Send(request);
             return Ok();
         }
 
         [HttpPut]
-        public async Task<IActionResult> Put(VM_ProductUpdate model)
+        public async Task<IActionResult> Put([FromBody]UpdateProductCommandRequest request)
         {
-            Product product = await _productReadRepository.GetByIdAsync(model.Id);
-            product.Stock = model.Stock;
-            product.Price = model.Price;
-            product.Name = model.Name;
-            await _productWriteRepository.SaveAsync();
+            UpdateProductCommandResponse response = await _mediator.Send(request);
             return Ok();
         }
         
-        [HttpDelete("{id}")]
-        public async Task<IActionResult> Delete(string id) 
+        [HttpDelete("{Id}")]
+        public async Task<IActionResult> Delete([FromRoute] DeleteProductCommandRequest request) 
         {
-            await _productWriteRepository.DeleteById(id);
-            await _productWriteRepository.SaveAsync();
+            DeleteProductCommandResponse response = await _mediator.Send(request);
             return Ok();
         }
 
-        [HttpDelete("[action]/{id}")]
-        public async Task<IActionResult> DeleteImage(string id, string imageId)
+        [HttpDelete("[action]/{Id}")]
+        public async Task<IActionResult> DeleteImage([FromRoute]DeleteProductImageCommandRequest request, [FromQuery] string ImageId)
         {
-            Product? product = await _productReadRepository.Table.Include(x => x.ProductImages).FirstOrDefaultAsync(x => x.Id == Guid.Parse(id));
-            ProductImageFile productImageFile = product.ProductImages.FirstOrDefault(x => x.Id == Guid.Parse(imageId));
-            product.ProductImages.Remove(productImageFile);
-            await _productImageFileWriteRepository.SaveAsync();
+            request.ImageId = ImageId;
+            DeleteProductImageCommandResponse response = await _mediator.Send(request);
             return Ok();
         }
 

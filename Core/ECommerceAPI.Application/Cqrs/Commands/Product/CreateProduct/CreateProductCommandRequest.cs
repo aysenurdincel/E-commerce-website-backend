@@ -1,12 +1,13 @@
-﻿using System;
+﻿using MediatR;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace ECommerceAPI.Application.ViewModels.Products
+namespace ECommerceAPI.Application.Cqrs.Commands.Product.CreateProduct
 {
-    public class VM_ProductCreate
+    public class CreateProductCommandRequest : IRequest<CreateProductCommandResponse>
     {
         public string Name { get; set; }
         public int Stock { get; set; }

@@ -5,12 +5,15 @@ using ECommerceAPI.Infrastructure;
 using FluentValidation;
 using FluentValidation.AspNetCore;
 using ECommerceAPI.Infrastructure.Storages;
+using ECommerceAPI.Application;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddPersistenceServices();
 builder.Services.AddInfrastructureServices();
+builder.Services.AddApplicationServices();
+
 builder.Services.AddStorage<LocalStorage>();
 
 builder.Services.AddCors(options => options.AddDefaultPolicy(policy =>
