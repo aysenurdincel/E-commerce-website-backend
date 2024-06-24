@@ -6,6 +6,9 @@ using FluentValidation;
 using FluentValidation.AspNetCore;
 using ECommerceAPI.Infrastructure.Storages;
 using ECommerceAPI.Application;
+using Microsoft.IdentityModel.Tokens;
+using System.Text;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -30,6 +33,23 @@ builder.Services.AddControllers(options => options.Filters.Add<ValidationFilter>
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer("Admin",options =>
+    {
+        options.TokenValidationParameters = new()
+        {
+            ValidateAudience = true, //token deðerini kullanacaklar
+            ValidateIssuer = true, //token deðerini daðýtan kim
+            ValidateLifetime = true, //tokenýn süresi
+            ValidateIssuerSigningKey = true, //tokenýn benim uygulamama ait olduðunu belirtir
+
+            ValidAudience = builder.Configuration["Token:Audience"],
+            ValidIssuer = builder.Configuration["Token:Issuer"],
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration["Token:SignInKey"])),
+
+        };
+    });
+
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
@@ -46,6 +66,7 @@ app.UseHttpsRedirection();
 
 app.UseCors();
 
+app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();

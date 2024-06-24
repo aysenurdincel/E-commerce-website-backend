@@ -13,6 +13,7 @@ using ECommerceAPI.Application.Repositories.ProductImage;
 using ECommerceAPI.Application.Storages;
 using ECommerceAPI.Application.ViewModels.Products;
 using MediatR;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -20,6 +21,7 @@ namespace ECommerceAPI.API.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
+    [Authorize(AuthenticationSchemes ="Admin")]
 
     //TEST CONTROLLER
     public class ProductsController : ControllerBase
