@@ -25,7 +25,7 @@ namespace ECommerceAPI.API.Controllers
         }
 
         [HttpGet("[action]")]
-        public async Task<IActionResult> RefreshTokenLogin([FromQuery]RefreshTokenCommandRequest request)
+        public async Task<IActionResult> RefreshTokenLogin([FromForm] RefreshTokenCommandRequest request)
         {
             RefreshTokenCommandResponse response = await _mediator.Send(request);
             return Ok(response);
