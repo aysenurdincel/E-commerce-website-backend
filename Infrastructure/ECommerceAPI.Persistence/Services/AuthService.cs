@@ -5,6 +5,7 @@ using ECommerceAPI.Application.Services;
 using ECommerceAPI.Application.Token;
 using MediatR;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -30,7 +31,7 @@ namespace ECommerceAPI.Persistence.Services
 
         public async Task<Token> LoginAsync(string usernameOrEmail, string password, int accessTokenLifetime)
         {
-            ECommerAPI.Domain.Entities.Identity.User user = await _userManager.FindByNameAsync(usernameOrEmail);
+            User user = await _userManager.FindByNameAsync(usernameOrEmail);
             if (user == null)            
                 user = await _userManager.FindByEmailAsync(usernameOrEmail);
             
@@ -47,6 +48,20 @@ namespace ECommerceAPI.Persistence.Services
                 return token;
             }
             throw new Exception();
+        }
+
+        public async Task<Token> RefreshTokenLoginAsync(string refreshToken)
+        {
+            User? user = await _userManager.Users.FirstOrDefaultAsync(users => users.RefreshToken == refreshToken);
+            if(user != null && user.RefreshTokenExpirationDate > DateTime.UtcNow)
+            {
+               Token token =  _tokenHandler.CreateAccessToken(5);
+               await _userService.UpdateRefreshToken(token.RefreshToken,user, token.Expiration, 5);
+
+               return token;
+            }
+            else
+                throw new Exception() ;
         }
     }
 }
