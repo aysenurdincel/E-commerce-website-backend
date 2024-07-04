@@ -9,5 +9,6 @@ namespace ECommerceAPI.Application.Token
     public interface ITokenHandler
     {
         DTO.Token CreateAccessToken(int expirationMinute);
+        string CreateRefreshToken();
     }
 }

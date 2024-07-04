@@ -1,5 +1,6 @@
 ﻿using ECommerAPI.Domain.Entities.Identity;
 using ECommerceAPI.Application.Cqrs.Commands.User.UserCreate;
+using ECommerceAPI.Application.Cqrs.Commands.User.UserLogin;
 using ECommerceAPI.Application.DTO.User;
 using ECommerceAPI.Application.Services;
 using MediatR;
@@ -46,6 +47,20 @@ namespace ECommerceAPI.Persistence.Services
                     response.Message += $"{error.Code}-{error.Description}";
                 }
             }return response;
+        }
+
+        public async Task UpdateRefreshToken(string refreshToken, User user, DateTime accesTokenDate, int refreshTokenLifeTime)
+        {
+
+            if (user != null) 
+            {              
+                user.RefreshToken = refreshToken;
+                user.RefreshTokenExpirationDate = accesTokenDate.AddMinutes(refreshTokenLifeTime);
+
+                await _userManager.UpdateAsync(user);
+            }
+            else
+                throw new Exception("Kullanıcı bulunamadı");
         }
     }
 }

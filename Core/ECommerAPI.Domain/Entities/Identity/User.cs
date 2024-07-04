@@ -10,6 +10,8 @@ namespace ECommerAPI.Domain.Entities.Identity
     public class User : IdentityUser<string>
     {
         public string Name {  get; set; }
-        
+
+        public string? RefreshToken { get; set; }
+        public DateTime? RefreshTokenExpirationDate { get; set; }
     }
 }

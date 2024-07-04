@@ -18,30 +18,31 @@ namespace ECommerceAPI.Persistence.Services
         readonly UserManager<ECommerAPI.Domain.Entities.Identity.User> _userManager;
         readonly SignInManager<ECommerAPI.Domain.Entities.Identity.User> _signInManager;
         readonly ITokenHandler _tokenHandler;
+        readonly IUserService _userService;
 
-        public AuthService(UserManager<User> userManager, SignInManager<User> signInManager, ITokenHandler tokenHandler)
+        public AuthService(UserManager<User> userManager, SignInManager<User> signInManager, ITokenHandler tokenHandler, IUserService userService)
         {
             _userManager = userManager;
             _signInManager = signInManager;
             _tokenHandler = tokenHandler;
+            _userService = userService;
         }
 
         public async Task<Token> LoginAsync(string usernameOrEmail, string password, int accessTokenLifetime)
         {
             ECommerAPI.Domain.Entities.Identity.User user = await _userManager.FindByNameAsync(usernameOrEmail);
-            if (user == null)
-            {
+            if (user == null)            
                 user = await _userManager.FindByEmailAsync(usernameOrEmail);
-            }
-            if (user == null)
-            {
+            
+            if (user == null)           
                 throw new Exception("Kullanıcı bulunamadı.");
-            }
+            
 
             SignInResult result = await _signInManager.CheckPasswordSignInAsync(user, password, false);
             if (result.Succeeded)
             {
                 Token token = _tokenHandler.CreateAccessToken(accessTokenLifetime);
+                await _userService.UpdateRefreshToken(token.RefreshToken, user, token.Expiration, 5);
 
                 return token;
             }
