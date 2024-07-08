@@ -24,8 +24,8 @@ namespace ECommerceAPI.API.Controllers
             return Ok(response);
         }
 
-        [HttpGet("[action]")]
-        public async Task<IActionResult> RefreshTokenLogin([FromForm] RefreshTokenCommandRequest request)
+        [HttpPost("[action]")]
+        public async Task<IActionResult> RefreshTokenLogin([FromBody] RefreshTokenCommandRequest request)
         {
             RefreshTokenCommandResponse response = await _mediator.Send(request);
             return Ok(response);
