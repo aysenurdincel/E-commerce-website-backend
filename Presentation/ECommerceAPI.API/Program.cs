@@ -87,8 +87,11 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
+
 //wwrootu kullanabilmek için
 app.UseStaticFiles();
+
+app.UseSerilogRequestLogging();
 
 app.UseHttpsRedirection();
 
