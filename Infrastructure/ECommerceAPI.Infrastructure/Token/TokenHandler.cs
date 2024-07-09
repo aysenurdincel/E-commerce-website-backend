@@ -1,4 +1,5 @@
-﻿using ECommerceAPI.Application.DTO;
+﻿using ECommerAPI.Domain.Entities.Identity;
+using ECommerceAPI.Application.DTO;
 using ECommerceAPI.Application.Token;
 using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.Tokens;
@@ -6,6 +7,7 @@ using System;
 using System.Collections.Generic;
 using System.IdentityModel.Tokens.Jwt;
 using System.Linq;
+using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
@@ -21,7 +23,7 @@ namespace ECommerceAPI.Infrastructure.Token
             _configuration = configuration;
         }
 
-        public Application.DTO.Token CreateAccessToken(int expirationMinute)
+        public Application.DTO.Token CreateAccessToken(int expirationMinute, User user)
         {
             Application.DTO.Token token = new Application.DTO.Token();
 
@@ -37,7 +39,8 @@ namespace ECommerceAPI.Infrastructure.Token
                 expires : token.Expiration,
                 //token ne zaman devreye girecek
                 notBefore : DateTime.UtcNow,
-                signingCredentials : credentials
+                signingCredentials : credentials,
+                claims: new List<Claim> { new(ClaimTypes.Name, user.UserName)}
                 );
             
             //token oluşturucu

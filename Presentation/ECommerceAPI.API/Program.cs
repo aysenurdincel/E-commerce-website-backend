@@ -9,6 +9,12 @@ using ECommerceAPI.Application;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Serilog;
+using Serilog.Core;
+using Serilog.Sinks.PostgreSQL;
+using System.Security.Claims;
+using Serilog.Context;
+using ECommerceAPI.API.ColumnWriters;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -22,6 +28,25 @@ builder.Services.AddStorage<LocalStorage>();
 builder.Services.AddCors(options => options.AddDefaultPolicy(policy =>
     policy.WithOrigins("http://localhost:4200", "https://localhost:4200").AllowAnyHeader().AllowAnyMethod().AllowCredentials()
 ));
+
+//Loglama iþlemi
+Logger log = new LoggerConfiguration()
+    .WriteTo.Console()
+    .WriteTo.File("logs/log.txt")
+    .WriteTo.PostgreSQL(builder.Configuration.GetConnectionString("PostgreSql"), "logs", needAutoCreateTable: true, columnOptions: new Dictionary<string, ColumnWriterBase>
+    {
+        {"message", new RenderedMessageColumnWriter()},
+        {"message_template", new MessageTemplateColumnWriter()},
+        {"level", new LevelColumnWriter()},
+        {"time_stamp", new TimestampColumnWriter()},
+        {"exception", new ExceptionColumnWriter()},
+        {"log_event", new LogEventSerializedColumnWriter()},
+        {"user_name", new UsernameColumnWriter()}
+    })
+    .Enrich.FromLogContext()
+    .MinimumLevel.Information()
+    .CreateLogger();
+builder.Host.UseSerilog(log);
 
 
 builder.Services.AddFluentValidationAutoValidation().AddFluentValidationClientsideAdapters();
@@ -46,7 +71,10 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             ValidAudience = builder.Configuration["Token:Audience"],
             ValidIssuer = builder.Configuration["Token:Issuer"],
             IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration["Token:SignInKey"])),
-            LifetimeValidator = (notBefore, expires, securityToken, validationParameter) => expires != null ? expires > DateTime.UtcNow : false
+            LifetimeValidator = (notBefore, expires, securityToken, validationParameter) => expires != null ? expires > DateTime.UtcNow : false,
+
+            //hangi kullanýcý istek yapýyor
+            NameClaimType = ClaimTypes.Name,
         };
     });
 
@@ -68,6 +96,14 @@ app.UseCors();
 
 app.UseAuthentication();
 app.UseAuthorization();
+
+app.Use(async (context, next) =>
+{
+    var username = context.User?.Identity?.IsAuthenticated != null || true ? context.User.Identity.Name : null;
+    LogContext.PushProperty("user_name", username);
+
+    await next();
+});
 
 app.MapControllers();
 
