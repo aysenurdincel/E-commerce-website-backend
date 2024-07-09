@@ -15,6 +15,7 @@ using Serilog.Sinks.PostgreSQL;
 using System.Security.Claims;
 using Serilog.Context;
 using ECommerceAPI.API.ColumnWriters;
+using Microsoft.AspNetCore.HttpLogging;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -47,6 +48,16 @@ Logger log = new LoggerConfiguration()
     .MinimumLevel.Information()
     .CreateLogger();
 builder.Host.UseSerilog(log);
+
+
+builder.Services.AddHttpLogging(logging =>
+{
+    logging.LoggingFields = HttpLoggingFields.All;
+    logging.RequestHeaders.Add("sec-ch-ua");
+    logging.MediaTypeOptions.AddText("application/javascript");
+    logging.RequestBodyLogLimit = 4096;
+    logging.ResponseBodyLogLimit = 4096;
+});
 
 
 builder.Services.AddFluentValidationAutoValidation().AddFluentValidationClientsideAdapters();
@@ -93,9 +104,10 @@ app.UseStaticFiles();
 
 app.UseSerilogRequestLogging();
 
+app.UseHttpLogging();
+app.UseCors();
 app.UseHttpsRedirection();
 
-app.UseCors();
 
 app.UseAuthentication();
 app.UseAuthorization();
