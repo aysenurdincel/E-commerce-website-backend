@@ -44,6 +44,8 @@ Logger log = new LoggerConfiguration()
         {"log_event", new LogEventSerializedColumnWriter()},
         {"user_name", new UsernameColumnWriter()}
     })
+    //seq üzerinde görselleþtirmek için
+    .WriteTo.Seq(builder.Configuration["Seq:ServerUrl"])
     .Enrich.FromLogContext()
     .MinimumLevel.Information()
     .CreateLogger();
