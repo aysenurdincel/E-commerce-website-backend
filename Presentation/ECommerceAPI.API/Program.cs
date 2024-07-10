@@ -16,6 +16,7 @@ using System.Security.Claims;
 using Serilog.Context;
 using ECommerceAPI.API.ColumnWriters;
 using Microsoft.AspNetCore.HttpLogging;
+using ECommerceAPI.API.Extensions;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -100,7 +101,7 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-
+app.ConfigureExceptionHandler<Program>(app.Services.GetRequiredService<ILogger<Program>>());
 //wwrootu kullanabilmek için
 app.UseStaticFiles();
 
@@ -114,13 +115,8 @@ app.UseHttpsRedirection();
 app.UseAuthentication();
 app.UseAuthorization();
 
-app.Use(async (context, next) =>
-{
-    var username = context.User?.Identity?.IsAuthenticated != null || true ? context.User.Identity.Name : null;
-    LogContext.PushProperty("user_name", username);
-
-    await next();
-});
+//extension olarak oluþturuldu
+app.ConfigureUse();
 
 app.MapControllers();
 
